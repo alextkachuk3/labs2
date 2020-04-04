@@ -1,0 +1,392 @@
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <io.h>
+#include <clocale>
+
+using namespace std;
+
+struct book
+{
+	int id = 0;
+	string title;
+	int count = 0;
+};
+
+struct user
+{
+	int id = 0;
+	string login;
+	string password;
+};
+
+struct relation
+{
+	int book_id;
+	int user_id;
+};
+
+relation* readingrelations(int& count, string path)
+{
+	fstream in(path, ios::binary | ios::in);
+	in.seekg(0, std::ios::end);
+	count = in.tellg() / sizeof relation;
+	in.seekg(ios_base::beg);
+	relation* relationsarray = new relation[count];
+	for (int i = 0; i < count; i++)
+		in.read((char*)&relationsarray[i], sizeof relationsarray[i]);
+	in.close();
+	return relationsarray;
+}
+
+book* readingbooks(int& count, string path)
+{
+	fstream in(path, ios::binary | ios::in);
+	in.seekg(0, std::ios::end);
+	count = in.tellg()/sizeof book;
+	in.seekg(ios_base::beg);
+	book* booksarray = new book[count];
+	for (int i = 0; i < count; i++)
+		in.read((char*)&booksarray[i], sizeof booksarray[i]);
+	in.close();
+	return booksarray;
+}
+
+user* readingusers(int& count, string path)
+{
+	fstream in(path, ios::binary | ios::in);
+	in.seekg(0, std::ios::end);
+	count = in.tellg() / sizeof user;
+	in.seekg(ios_base::beg);
+	user* usersarray = new user[count];
+	for (int i = 0; i < count; i++)
+		in.read((char*)&usersarray[i], sizeof usersarray[i]);
+	in.close();
+	return usersarray;
+}
+
+void writingusers(user regusers, string path)
+{
+	ofstream out(path, ios::binary | ios::app);
+	out.write((char*)&regusers, sizeof regusers);
+	out.close();
+}
+
+void writingbooks(book regbooks, string path)
+{
+	ofstream out(path, ios::binary | ios::app);
+	out.write((char*)&regbooks, sizeof regbooks);
+	out.close();
+}
+
+void writingrelations(relation rel, string path)
+{
+	ofstream out(path, ios::binary | ios::app);
+	out.write((char*)&rel, sizeof rel);
+	out.close();
+}
+
+void rewritingrelations(relation* rel, int count, string path)
+{
+	ofstream out(path, ios::binary | ios::out);
+	for (int i = 0; i < --count; i++)
+	{
+		out.write((char*)&rel[i], sizeof rel[i]);
+	}
+	out.close();
+}
+
+void printusers(int count, user* users)
+{
+	for (int i = 0; i < count; i++)
+	{
+		cout << "User#" << i << endl << "login:" << users[i].login << endl << "password:" << users[i].password << endl;
+	}
+}
+
+void printbooks(int count, book* books)
+{
+	for (int i = 0; i < count; i++)
+	{
+		cout << "Book#" << i << endl << "Title:" << books[i].title << endl << "Count:" << books[i].count << endl;
+	}
+}
+
+int main()
+{
+	setlocale(LC_ALL, "Russian");
+	bool admin_status = false;
+	string pathbooks = "books.bin";
+	string pathusers = "users.bin";
+	string pathrelation = "relation.bin";
+	int countofbooks, countofusers, countofrelation;
+	book* books = readingbooks(countofbooks, pathbooks);
+	relation* relations = readingrelations(countofrelation, pathrelation);
+	user* users = readingusers(countofusers, pathusers);
+	for(int i = 0; i < countofbooks; i++)
+		for (int j = 0; j < countofrelation; j++)
+		{
+			if (books[i].id == relations[j].book_id)
+			{
+				books[i].count--;
+			}
+		}
+	int p1;
+	while (!admin_status)
+	{
+		cout << "Выберите действие" << endl << "1.Войти" << endl << "2.Регистрация" << endl << "3.Выход" << endl;
+		cin >> p1;
+		system("cls");
+		switch (p1)
+		{
+		case 1:
+		{
+			int session_login = -2;
+			user login;
+			cout << "Логин" << endl;
+			cin >> login.login;
+			cout << "Пароль" << endl;
+			cin >> login.password;
+			system("cls");
+			if (login.login == "admin" && login.password == "admin")
+			{
+				admin_status = true;
+				break;
+			}
+			for (int i = 0; i < countofusers; i++)
+			{
+				if (login.login == users[i].login)
+				{
+					session_login = users[i].id;
+				}
+			}
+			if (session_login == -2)
+			{
+				cout << "Пользователя не существует!";
+				return 0;
+			}
+			if (users[session_login].password != login.password)
+			{
+				cout << "Введен неверный пароль!";
+				return 0;
+			}
+			else
+			{
+				cout << "Авторизация успешна!" << endl << users[session_login].login <<", Привет!" << endl;
+			}
+			int p2;
+			
+			while (true)
+			{
+				cout << "Выберите операцию:" << endl << "1.Просмотреть полный список книг" << endl << "2.Поиск" << endl << "3.Заказать книгу" << endl << "4.Просмотреть взятые книги" << endl << "5.Отдать книгу" << endl << "6.Выход" << endl; 
+				cin >> p2;
+				switch (p2)
+				{
+				case 1:
+				{
+					printbooks(countofbooks, books);
+					break;
+				}
+				case 2:
+				{
+					system("cls");
+					string search;
+					cout << "Введите слова для поиска" << endl;
+					cin.clear();
+					cin.ignore(numeric_limits<streamsize>::max(), '\n');
+					getline(cin, search);
+					for (int i = 0; i < countofbooks; i++)
+					{
+						if (books[i].title.find(search) != string::npos)
+							cout << "Книга#" << i << endl << "Название:" << books[i].title << endl << "Количество:" << books[i].count << endl;
+					}
+					break;
+				}
+				case 3:
+				{
+					relation temp;
+					cout << "Введите ID книжки которую хотите заказать"<<endl;
+					cin >> temp.book_id;
+					bool b2 = false;
+					for (int i = 0; i < countofrelation; i++)
+					{
+						if (temp.book_id == relations[i].book_id && session_login == relations[i].user_id)
+						{
+							b2 = true;
+							break;
+						}
+					}
+					if (!b2)
+					{
+						if (temp.book_id < countofbooks)
+						{
+							temp.user_id = session_login;
+							writingrelations(temp, pathrelation);
+							cout << "Заказ принят" << endl;
+							return 0;
+						}
+						if (books[temp.book_id].count == 0)
+						{
+							cout << "Книги нет в наличии!" << endl;
+							return 0;
+						}
+						else
+						{
+							cout << "Введен неверный ID!";
+							return 0;
+						}
+					}
+					else
+					{
+						cout << "Вы уже взяли эту книгу!" << endl;
+						return 0;
+					}
+				}
+				case 4:
+				{
+					system("cls");
+					for (int i = 0; i < countofrelation; i++)
+					{
+						if (session_login == relations[i].user_id)
+						{
+							cout << "Книга#" << relations[i].book_id << endl << "Название:" << books[relations[i].book_id].title << endl;
+						}
+					}
+					break;
+				}
+				case 5: 
+				{
+					cout << "Введите ID книги которую хотите отдать" << endl;
+					int temp, pos;
+					bool b = false;
+					cin >> temp;
+					for (int i = 0; i < countofrelation; i++)
+					{
+						if (temp == relations[i].book_id && session_login == relations[i].user_id)
+						{
+							b = true;
+							pos = i;
+							break;
+						}
+					}
+					if (b)
+					{
+						if (temp < countofbooks)
+						{
+							int j = 0;
+							relation* new_relations = new relation[--countofrelation];
+							for (int i = 0; i < countofrelation; i++)
+							{
+								if (i != pos)
+								{
+									new_relations[j] = relations[i];
+									j++;
+								}
+							}
+							rewritingrelations(new_relations, countofrelation, pathrelation);
+							return 0;
+						}
+						else
+						{
+							cout << "Книги с таким ID не существует";
+							return 0;
+						}
+					}
+					else
+					{
+						cout << "Вы не брали эту книгу";
+						return 0;
+					}
+				}
+				case 6:
+				{
+					return 0;
+				}
+				default:
+					cout << "Выбрано неправильное действие!" << endl;
+					continue;
+				}
+			}
+		}
+		case 2:
+		{
+			user reg;
+			cout << "Логин" << endl;
+			cin >> reg.login;
+			cout << "Пароль" << endl;
+			cin >> reg.password;
+			system("cls");
+			reg.id = countofusers;
+			countofusers++;
+			writingusers(reg, pathusers);
+			return 0;
+		}
+		case 3:
+		{
+			return 0;
+		}
+		default:
+		{
+			cout << "Выбрано неправильное действие!" << endl;
+			break;
+		}
+		}
+	}
+	while (admin_status)
+	{
+		cout << "Выбирете действие:" << endl << "1.Просмотреть список пользователей" << endl << "2.Просмотреть список книг" << endl << "3.Добавить книгу" << endl << "4.Просмотреть взятые книги" << endl << "5.Выйти" << endl;
+		cin >> p1;
+		system("cls");
+		switch (p1)
+		{
+		case(1):
+		{
+			printusers(countofusers, users);
+			break;
+		}
+		case(2):
+		{
+			printbooks(countofbooks, books);
+			break;
+		}
+		case(3):
+		{
+			book reg;
+			cout << "Название" << endl;
+			cin.clear();
+			cin.ignore(numeric_limits<streamsize>::max(), '\n');
+			getline(cin, reg.title);
+			cout << "Количество" << endl;
+			cin >> reg.count;
+			system("cls");
+			reg.id = countofbooks;
+			countofbooks++;
+			writingbooks(reg, pathbooks);
+			return 0;
+		}
+		case(4):
+		{
+			system("cls");
+			int temp_id;
+			cout << "Введите ID пользователя:";
+			cin >> temp_id;
+			for (int i = 0; i < countofrelation; i++)
+			{
+				if (temp_id == relations[i].user_id)
+				{
+					cout << books[relations[i].book_id].title << endl;
+				}
+			}
+			break;
+		}
+		case(5):
+		{
+			return 0;	
+		}
+		default:
+		{
+			cout << "Выберено неправильное действие!" << endl;
+		}
+		}
+	}
+}
