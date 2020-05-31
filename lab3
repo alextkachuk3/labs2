@@ -296,9 +296,8 @@ node* unite(node* leaf) {
     return parent;
 }
 
-node* insert(node* p, int k) { // вставка ключа k в дерево с корнем p; всегда возвращаем корень дерева, т.к. он может меняться
-    if (!p) return new node(k); // если дерево пусто, то создаем первую 2-3-вершину (корень)
-
+node* insert(node* p, int k) {
+    if (!p) return new node(k);
     if (p->is_leaf()) p->insert_to_node(k);
     else if (k <= p->key[0]) insert(p->first, k);
     else if ((p->size == 1) || ((p->size == 2) && k <= p->key[1])) insert(p->second, k);
@@ -310,11 +309,11 @@ node* insert(node* p, int k) { // вставка ключа k в дерево с
 node* split(node* item) {
     if (item->size < 3) return item;
 
-    node* x = new node(item->key[0], item->first, item->second, nullptr, nullptr, item->parent); // Создаем две новые вершины,
-    node* y = new node(item->key[2], item->third, item->fourth, nullptr, nullptr, item->parent);  // которые имеют такого же родителя, как и разделяющийся элемент.
+    node* x = new node(item->key[0], item->first, item->second, nullptr, nullptr, item->parent);
+    node* y = new node(item->key[2], item->third, item->fourth, nullptr, nullptr, item->parent);
     if (x->first)  x->first->parent = x;    
     if (x->second) x->second->parent = x;
-    if (y->first)  y->first->parent = y;    // Поэтому нужно правильно установить указатели.
+    if (y->first)  y->first->parent = y;
     if (y->second) y->second->parent = y;
 
     if (item->parent) {
