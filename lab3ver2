@@ -1,0 +1,246 @@
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+struct node
+{
+private:
+    int count_keys;
+    int key[3];
+    node* first;
+    node* second;
+    node* third;
+    node* fourth;
+    node* parent;
+
+    void swap(int& x, int& y)
+    {
+        int temp = x;
+        x = y;
+        y = temp;
+    }
+
+    void sort2(int& x, int& y)
+    {
+        if (x > y) swap(x, y);
+    }
+
+    void sort3(int& x, int& y, int& z)
+    {
+        if (x > y) swap(x, y);
+        if (x > z) swap(x, z);
+        if (y > z) swap(y, z);
+    }
+
+    void sort()
+    {
+        if (count_keys == 1) return;
+        if (count_keys == 2) sort2(key[0], key[1]);
+        if (count_keys == 3) sort3(key[0], key[1], key[2]);
+    }
+
+    void insert_to_node(int k)
+    {
+        key[count_keys] = k;
+        count_keys++;
+        sort();
+    }
+
+    void become_node2(int k, node* first_, node* second_)
+    {
+        key[0] = k;
+        first = first_;
+        second = second_;
+        third = nullptr;
+        fourth = nullptr;
+        parent = nullptr;
+        count_keys = 1;
+    }
+
+    bool is_leaf()
+    {
+        return !first && !second && !third;
+    }
+
+public:
+    node() : count_keys(0), key{ 0, 0, 0 }, first(nullptr), second(nullptr),
+        third(nullptr), fourth(nullptr), parent(nullptr) {};
+    node(int k) : count_keys(1), key{ k, 0, 0 }, first(nullptr), second(nullptr),
+        third(nullptr), fourth(nullptr), parent(nullptr) {}
+    node(int k, node* first_, node* second_, node* third_, node* fourth_, node* parent_) :
+        count_keys(1), key{ k, 0, 0 }, first(first_), second(second_),
+        third(third_), fourth(fourth_), parent(parent_) {}
+
+    friend node* split(node* item);
+    friend node* insert(node* p, int k);
+    friend void print(node* p);
+};
+
+node* insert(node* p, int k)
+{
+    if (!p) return new node(k);
+    if (p->is_leaf()) p->insert_to_node(k);
+    else if (k <= p->key[0]) insert(p->first, k);
+    else if ((p->count_keys == 1) || ((p->count_keys == 2) && k <= p->key[1])) insert(p->second, k);
+    else insert(p->third, k);
+    return split(p);
+}
+
+node* split(node* item)
+{
+    if (item->count_keys < 3) return item;
+    node* x = new node(item->key[0], item->first, item->second, nullptr, nullptr, item->parent);
+    node* y = new node(item->key[2], item->third, item->fourth, nullptr, nullptr, item->parent);
+    if (x->first)  x->first->parent = x;
+    if (x->second) x->second->parent = x;
+    if (y->first)  y->first->parent = y;
+    if (y->second) y->second->parent = y;
+
+    if (item->parent)
+    {
+        item->parent->insert_to_node(item->key[1]);
+
+        if (item->parent->first == item) item->parent->first = nullptr;
+        else if (item->parent->second == item) item->parent->second = nullptr;
+        else if (item->parent->third == item) item->parent->third = nullptr;
+
+        if (item->parent->first == nullptr)
+        {
+            item->parent->fourth = item->parent->third;
+            item->parent->third = item->parent->second;
+            item->parent->second = y;
+            item->parent->first = x;
+        }
+        else if (item->parent->second == nullptr)
+        {
+            item->parent->fourth = item->parent->third;
+            item->parent->third = y;
+            item->parent->second = x;
+        }
+        else
+        {
+            item->parent->fourth = y;
+            item->parent->third = x;
+        }
+        node* tmp = item->parent;
+        delete item;
+        return tmp;
+    }
+    else
+    {
+        x->parent = item;
+        y->parent = item;
+        item->become_node2(item->key[1], x, y);
+        return item;
+    }
+}
+
+void print(node* p)
+{
+    node* current = p;
+    int high = 0;
+    while (current->first)
+    {
+        current = current->first;
+        high++;
+    }
+    current = p;
+    int cur_high = 0;
+    vector<vector<int>> num(high + 1, vector<int>());
+    int breaker = 0;
+    while (breaker < 3)
+    {
+        if (current == p)
+            breaker++;
+        if ((find(num[cur_high].begin(), num[cur_high].end(), current->key[0]) == num[cur_high].end()))
+        {
+            for (int i = 0; i < current->count_keys; i++)
+                num[cur_high].push_back(current->key[i]);
+        }
+        if (current->first)
+        {
+            if (find(num[cur_high + 1].begin(), num[cur_high + 1].end(), current->first->key[0]) == num[cur_high + 1].end())
+            {
+                current = current->first;
+                cur_high++;
+                continue;
+            }
+        }
+        if (current->second)
+        {
+            if (find(num[cur_high + 1].begin(), num[cur_high + 1].end(), current->second->key[0]) == num[cur_high + 1].end())
+            {
+                current = current->second;
+                cur_high++;
+                continue;
+            }
+        }
+        if (current->third)
+        {
+            if (find(num[cur_high + 1].begin(), num[cur_high + 1].end(), current->third->key[0]) == num[cur_high + 1].end())
+            {
+                current = current->third;
+                cur_high++;
+                continue;
+            }
+        }
+        cur_high--;
+        current = current->parent;
+    }
+    for (int i = 0; i <= high; i++)
+    {
+        cout << "level#" << i << " :";
+        for (int j = 0; j < num[i].size(); j++)
+        {
+            cout << " " << num[i][j];
+        }
+        cout << endl;
+    }
+}
+
+int main()
+{
+    node* tree = new node;
+    int op = 1;
+    while (op)
+    {
+
+        cout << "0.Exit" << endl << "1.Add" << endl << "2.Print" << endl;
+        cin >> op;
+        switch (op)
+        {
+        case 0:
+        {
+            break;
+        }
+        case 1:
+        {
+            system("cls");
+            cout << "How much num you want add?" << endl;
+            int c;
+            cin >> c;
+            for (int i = 0; i < c; i++)
+            {
+                cout << "Enter num" << endl;
+                int num;
+                cin >> num;
+                insert(tree, num);
+            }
+            break;
+        }
+        case 2:
+        {
+            system("cls");
+            print(tree);
+            break;
+        }
+        default:
+        {
+            system("cls");
+            cout << "Wrong operation!" << endl;
+        }
+        }
+    }
+    return 0;
+}
