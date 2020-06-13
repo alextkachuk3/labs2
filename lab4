@@ -1,0 +1,302 @@
+#include <map>
+#include <set>
+#include <vector>
+#include <iostream>
+#include <fstream>
+
+using namespace std;
+
+const string path = "Save.bin";
+
+class Graph
+{
+private:
+	class Top
+	{
+	public:
+		Top() {};
+		Top(int num)
+		{
+			index = num;
+		}
+		int index = 0;
+		set<Top*> links;
+	};
+	map<int, Top> g;
+public:
+	void print_graph()
+	{
+		if(g.size())
+		for (auto a : g)
+		{
+			cout << "Top " << a.second.index;
+			if (a.second.links.size())
+			{
+				cout << " connected to: ";
+				for (auto b : a.second.links)
+				{
+					cout << b->index << " ";
+				}
+				cout << endl;
+			}
+			else
+			{
+				cout << " not connected" << endl;
+			}
+		}
+		else
+		{
+			cout << "Graph is empty" << endl;
+		}
+	}
+	void add_top()
+	{
+		if (g.size())
+		{
+			auto a = g.end();
+			a--;
+			g[a->second.index + 1] = Top(a->second.index + 1);
+		}
+		else
+			g[0] = Top(0);
+	}
+	void connection(const int& num1, const int& num2)
+	{
+		if (!g.count(num1) || !g.count(num2))
+		{
+			cout << "One of the tops does not exist" << endl;
+		}
+		else
+		{
+			g[num1].links.insert(&g[num2]);
+			g[num2].links.insert(&g[num1]);
+		}
+	}
+	void del_top(const int& index)
+	{
+		if (!g.count(index))
+		{
+			cout << "There is no such top!" << endl;
+			return;
+		}
+		for (auto a : g[index].links)
+		{
+			a->links.erase(&g[index]);
+		}
+		g.erase(index);
+		cout << "Top deleted" << endl;
+	}
+	void clear()
+	{
+		g.clear();
+	}
+	friend bool operator<(const Top& lft, const Top& rth)
+	{
+		return lft.index < rth.index;
+	}
+
+	void contraction(const int& num1, const int& num2)
+	{
+		for (auto a : g[num2].links)
+		{
+			g[num1].links.insert(a);
+			a->links.erase(&g[num2]);
+			a->links.insert(&g[num1]);
+		}
+		del_top(num2);
+	}
+
+	void save()
+	{
+		bool** adjacency_matrix = new bool* [g.size()];
+		for (int i = 0; i < g.size(); i++)
+		{
+			adjacency_matrix[i] = new bool[g.size()];
+		}
+		for (int i = 0; i < g.size(); i++)
+		{
+			for (int j = 0; j < g.size(); j++)
+			{
+				adjacency_matrix[i][j] = g[i].links.count(&g[j]);
+			}
+		}
+		ofstream out(path, ios::binary);
+		for (int i = 0; i < g.size(); i++)
+			for (int j = 0; j < g.size(); j++)
+			{
+				out.write((char*)&adjacency_matrix[i][j], sizeof adjacency_matrix[i][j]);
+			}
+		out.close();
+		for (int i = 0; i < g.size(); i++)
+		{
+			delete[] adjacency_matrix[i];
+		}
+		delete[] adjacency_matrix;
+	}
+	void reading()
+	{
+		int count;
+		fstream in(path, ios::binary | ios::in);
+		if (!in.is_open())
+		{
+			system("cls");
+			cout << "File not found" << endl;
+			return;
+		}
+		in.seekg(0, std::ios::end);
+		count = sqrt(in.tellg() * 1);
+		bool** adjacency_matrix = new bool* [count];
+		for (int i = 0; i < count; i++)
+		{
+			adjacency_matrix[i] = new bool[count];
+		}
+		in.seekg(ios_base::beg);
+		for (int i = 0; i < count; i++)
+			for (int j = 0; j < count; j++)
+			{
+				in.read((char*)&adjacency_matrix[i][j], sizeof adjacency_matrix[i][j]);
+			}
+		in.close();
+		for (int i = 0; i < count; i++)
+		{
+			for (int j = 0; j < count; j++)
+			{
+				cout << adjacency_matrix[i][j];
+			}
+			cout << endl;
+		}
+		g.clear();
+		for (int i = 0; i < count; i++)
+		{
+			add_top();
+		}
+		for (int i = 0; i < count; i++)
+		{
+			for (int j = 0; j < count; j++)
+			{
+				if (adjacency_matrix[i][j])
+				{
+					g[i].links.insert(&g[j]);
+				}
+			}
+		}
+		for (int i = 0; i < count; i++)
+		{
+			delete [] adjacency_matrix[i];
+		}
+		delete [] adjacency_matrix;
+	}
+};
+
+int main()
+{
+	Graph my_graph;
+	int op1 = 0;
+	while (op1 != 5)
+	{
+		cout << "1.Create or edit graph" << endl << "2.Read graph" << endl << "3.Print graph"
+			<< endl << "4.Write graph" << endl << "5.Exit" << endl;
+		cin >> op1;
+
+		////////////////////////////////////////////////////////////////////////////////////////////////////////
+		switch (op1)
+		{
+		case 1:
+		{
+			system("cls");
+			int op2 = 0;
+			while (op2 != 5)
+			{
+				cout << "1.Add tops" << endl << "2.Connect tops" << endl << "3.Contraction"
+					<< endl << "4.Clear graph" << endl << "5.Back" << endl;
+				cin >> op2;
+				switch (op2)
+				{
+				case 1:
+				{
+					system("cls");
+					int count;
+					cout << "Enter count of top" << endl;
+					cin >> count;
+					for (int i = 0; i < count; i++)
+					{
+						my_graph.add_top();
+					}
+					break;
+				}
+				case 2:
+				{
+					system("cls");
+					int count;
+					cout << "How much connections you want to create?" << endl;
+					cin >> count;
+					for (int i = 0; i < count; i++)
+					{
+						int n1, n2;
+						cout << "Enter a pair of tops:" << endl;
+						cin >> n1 >> n2;
+						my_graph.connection(n1, n2);
+					}
+					break;
+				}
+				case 3:
+				{
+					cout << "Enter a pair of tops:" << endl;
+					int num1, num2;
+					cin >> num1 >> num2;
+					my_graph.contraction(num1, num2);
+					break;
+				}
+				case 4:
+				{
+					system("cls");
+					my_graph.clear();
+					break;
+				}
+				case 5:
+				{
+
+					break;
+				}
+				default:
+					system("cls");
+					cout << "Wrong operation!" << endl;
+					break;
+				}
+			}
+			break;
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////
+
+		case 2:
+		{
+			my_graph.reading();
+
+			break;
+		}
+		case 3:
+		{
+			system("cls");
+			my_graph.print_graph();
+			break;
+		}
+		case 4:
+		{
+			my_graph.save();
+			break;
+		}
+		case 5:
+		{
+			break;
+		}
+		default:
+		{
+			system("cls");
+			cout << "Wrong operation!" << endl;
+			break;
+		}
+		}
+	}
+	return 0;
+}
